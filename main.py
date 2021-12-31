@@ -11,12 +11,12 @@ import numpy as np
 import os
 import keras as K
 import subprocess
-import  time
-import  tkinter as tk
+import time
+import tkinter as tk
 from tkinter import filedialog
 import os
 import shutil
-import  pandas as pd
+import pandas as pd
 
 # инструменты нормализации
 from sklearn import preprocessing
@@ -42,11 +42,16 @@ exercise_recognizer = K.models.load_model(path_classificator)
 
 """# Необходимые функции"""
 
-
 ######################################
 # функция предикта одного изображения
 ######################################
 def predict(path):
+    '''
+    :param path:
+    :return:
+    nnnknknknknknknknknknknknknknknknkknknkknknknknknknk
+    '''
+
     # path - путь к файлу
     x, img = data.transforms.presets.ssd.load_test(path, short=512)
     print('Shape of pre-processed image:', x.shape)
@@ -100,6 +105,7 @@ def get_length(filename):
     return float(result.stdout)
 '''
 
+
 ########################
 # функция нарезки видео
 ########################
@@ -113,8 +119,8 @@ def save_frames(dir_video, dir_img, min_value):
 
     for cur_video in list_video_names:
         cur_video_path = dir_video + cur_video
- #       cur_length = get_length(cur_video_path)
- #       print('Длина видео', cur_length)
+        #       cur_length = get_length(cur_video_path)
+        #       print('Длина видео', cur_length)
 
         video_capture = cv2.VideoCapture(cur_video_path)
         fps = video_capture.get(cv2.CAP_PROP_FPS)
@@ -125,20 +131,20 @@ def save_frames(dir_video, dir_img, min_value):
 
         while video_capture.isOpened():
             frame_is_read, frame = video_capture.read()
-            cur_video = cur_video.replace(".", "")                                          # .replace(".", "") исключает точки из названия видео
+            cur_video = cur_video.replace(".", "")  # .replace(".", "") исключает точки из названия видео
             if frame_is_read:
                 print(type(frame))
                 cv2.imwrite(f'{dir_img}{cur_video}_cadr_{str(counter)}.jpg', frame)
                 print(cv2.imwrite(f'{dir_img}{cur_video}_cadr_{str(counter)}.jpg', frame))
-#                frame = frame.astype(np.uint8)
-#                image.imsave(f'{dir_img}{cur_video}_cadr_{str(counter)}.jpg', frame)
+                #                frame = frame.astype(np.uint8)
+                #                image.imsave(f'{dir_img}{cur_video}_cadr_{str(counter)}.jpg', frame)
                 counter += 1
             else:
                 print("Could not read the frame.")
                 break
         print('Количество кадров: ', counter)
         print(f'{dir_img}{cur_video}_cadr_{str(counter)}.jpg')
-#        video_length.append(cur_length)
+        #        video_length.append(cur_length)
         all_FPS.append(fps)
         number_of_cadrs.append(counter)
 
@@ -147,59 +153,140 @@ def save_frames(dir_video, dir_img, min_value):
 
     list_img = os.listdir(dir_img)
 
-#    print(min(video_length), max(video_length), video_length)
+    #    print(min(video_length), max(video_length), video_length)
     print(min(all_FPS), max(all_FPS), all_FPS)
     print(min(number_of_cadrs), max(number_of_cadrs), number_of_cadrs)
     print(bad_video)
 
-    return list_video_names
+    return list_video_names, number_of_cadrs
 
 
 ############################################################
 # функция выделения признаков из нужных кадров ОДНОГО видео
 ############################################################
 
-def show_pred(dir_source, list_video_names, function):
-    data_all = np.array([])  # массив данных по всем видео
+def show_pred(dir_source, list_video_names,number_of_cadrs, need_count, function):
+    '''
+    Описание
+    '''
+    
 
+    data_class = np.array([])   # массив данных для классификатора
+    data_NoR = []               # массив количества повторов на всех видео
+
+#........................................Цикл формирования данных по всем видео 
     for video_name in list_video_names:
-        list_bbox = []
-
+        # листы для классификации
+        list_bbox   = []
         list_coords = []
+
+        # листы для подсчета 
+        list_bbox_count     = []
+        list_coords_count   = []        
+        
 
         # !!! Включить интерактивный режим для анимации
         plt.ion()
 
         video_name = video_name.replace(".", "")  # .replace(".", "") исключает точки из названия видео
 
-        # проходимся по всем нужным кадрам текущего видео
-        for counter in range(0, 100, 10):
-            #      img = plt.imread( f'{dir_source}{video_name}_cadr_{str(counter)}.jpg')
-            img_path = f'{dir_source}{video_name}_cadr_{str(counter)}.jpg'
+        # если выбран режим подсчтета количества упражнений
+        if need_count: 
+#........................................Цикл формирования данных с кадров одного видео
 
-            count = 0
-            for try_step in range(10):
-                try:
-                    upscale_bbox, pred_coords = predict(f'{dir_source}{video_name}_cadr_{str(counter + count)}.jpg')
-                except:
-                    count += 1
-                    continue
-                else:
-                    break
-            count = 0
+            print(number_of_cadrs, type(number_of_cadrs))
+            for counter in range(0, max(number_of_cadrs), 10):   # когда несколько доллжно быть [], ведь number_of_cadrs лист, что за бред
+            
+                img_path = f'{dir_source}{video_name}_cadr_{str(counter)}.jpg'
 
-            list_bbox.append(upscale_bbox)
-            list_coords.append(pred_coords)
+                count = 0
+                for try_step in range(10):
+                    try:
+                        upscale_bbox, pred_coords = predict(f'{dir_source}{video_name}_cadr_{str(counter + count)}.jpg')
+                    except:
+                        count += 1
+                        continue
+                    else:
+                        break
+                print(count,'.....cont......................................................................................................................................................')
+                count = 0
+
+                # получение координат для классификации
+                list_bbox_count.append(upscale_bbox)
+                list_coords_count.append(pred_coords)
+            
+            # получение координат для подсчета
+            list_bbox =  list_bbox_count[0:10]
+            list_coords =  list_coords_count[0:10]
+
+            print('list_bbox_count:', list_bbox_count)
+            print('list_coords_count', list_coords_count)
+            print('list_bbox', list_bbox)
+            print('list_coords', list_coords)
+
+        else: # если НЕ выбран режим подсчтета количества упражнений
+        
+             for counter in range(0, 100, 10):
+             
+                img_path = f'{dir_source}{video_name}_cadr_{str(counter)}.jpg'
+
+                count = 0
+                for try_step in range(10):
+                    try:
+                        upscale_bbox, pred_coords = predict(f'{dir_source}{video_name}_cadr_{str(counter + count)}.jpg')
+                        # размерность pred_coords - (1, 17, 2)
+                    except:
+                        count += 1
+                        continue
+                    else:
+                        break
+                count = 0
+
+                # получение координат для классификации
+                list_bbox.append(upscale_bbox)
+                list_coords.append(pred_coords)       
 
         plt.ioff()
-#        plt.show()
 
-        # Получаем сформированные данны текущего кадра
+#..................................данные для классификатора......................... 
+        # Получаем сформированные данны текущего видео по данным для классификации
         data_video = function(list_bbox, list_coords)
+        print(data_video)
+        # Конкатинируем все видео и получаем общий массив с данными
+        data_class = np.concatenate((data_class, data_video), axis=0) # ()
+        print(data_class)
+        
+#..................................данные для счетчика......................... 
+        # Получаем сформированные данны текущего видео по данным для классификации
+        number_of_repet = function_count(list_coords_count)
+        # Конкатинируем все видео и получаем общий массив с данными
+        data_NoR.append(number_of_repet)       
+        print('data_NoR:', data_NoR)
 
-        data_all = np.concatenate((data_all, data_video), axis=0)
+    return data_class, data_NoR, len(list_video_names)
 
-    return data_all, len(list_video_names)
+
+def function_count (list_coords_count):
+    list_y = []
+    for cadr in list_coords_count: # cadr.shape = (1, 17, 2)
+        list_y.append(cadr[0][11][1])   # берём координаты узла таза на наиболее вероятном человеке в кадре
+
+    # считаем кол-во повторений
+    check = True
+    count = 0
+    for i in range(1, len(list_y)):
+        if list_y[i] - list_y[i - 1] < 0:
+            check = True
+
+        if check:
+            if list_y[i] - list_y[i - 1] >= 0:
+                check = False
+                count += 1
+    print(count)
+    return count 
+
+
+
 
 
 ################################################################
@@ -207,6 +294,18 @@ def show_pred(dir_source, list_video_names, function):
 ################################################################
 
 def form_data1(list_bbox, list_coords):
+    '''
+    Значение функции:
+        слить данные после предобученных нейронок воедино
+
+    Входные данные:
+        list_bbox - лист типа [[376.4499092102051, 34.83863830566406, 564.3607902526855, 501.78428649902344]]
+        list_coords - np массив размерностью (1, 17, 2), где 1 - кол-во найденных объектов
+
+    Входные данные:
+        data - np массив размерность (380, )
+    '''
+
     data = np.array([])
 
     for i in range(len(list_bbox)):
@@ -228,6 +327,7 @@ def form_data1(list_bbox, list_coords):
 ################################################################
 # функция №2 преобразования признаков текущего видео в Data данные
 ################################################################
+
 def form_data2(list_bbox, list_coords):
     data = np.array([])
 
@@ -255,10 +355,11 @@ def form_data2(list_bbox, list_coords):
 ####################################################
 # получения предикта классификатора из данных numpy
 ####################################################
-def control_predict(data_all, list_len):
+def control_predict(data_all, data_NoR, list_len):
     # нормализация данных
     data_norm = preprocessing.minmax_scale(data_all.T).T
 
+    # ..........................подготовка данных для классификатора........................
     # изменение размерности
     data_all_reshape = data_norm.reshape(list_len, 10, 38)
     data_all_reshape.shape
@@ -267,13 +368,17 @@ def control_predict(data_all, list_len):
     x_test = data_all_reshape.reshape(list_len, 10, 38, 1)
     print(x_test.shape)
 
+    # ..........................подготовка данных для счетчика........................
+    number_of_cadrs = data_all.shape[0] / 38  # количество кадров
+    data = data_all.reshape(int(number_of_cadrs), 19, 2)  # меняем размерность
+    
     # вывод определенного класса
     names = ['приседания', 'подтягивания', 'отжимания']
     max_indent = 15
 
     prediction = exercise_recognizer.predict(x_test)  # получаем весь предикт
 
-    df = pd.DataFrame(columns=['predict'])
+    df = pd.DataFrame(columns=['type of exercise', 'number of repetitions'])
 
     Class_img_path = filedialog.askdirectory(title='Укажите путь к картинкам классов')
 
@@ -294,8 +399,8 @@ def control_predict(data_all, list_len):
         plt.show()
 
         df.loc[f'Video_{i + 1}'] = pd.Series(
-            {'predict': pred})
-
+            {'type of exercise': pred, 'number of repetitions' : data_NoR[i]})
+#       df.loc[f'Net_{count_NN}'] = pd.Series({'batch':batch_now,'learnR':learnR_now,'hidden':hidden_now,'Time':time_point,'Loss':lossTot,'Acc':accuracy})
     window = tk.Tk()
     window.geometry('500x500')
     window.title("Таблица", )
@@ -304,17 +409,19 @@ def control_predict(data_all, list_len):
     lbl.grid(column=0, row=20)
 
     window.mainloop()
+
+
 ####################################
 # обобщение всех глобальных функций
 ####################################
-def classification(form_data1, min_cadrs_value = 95):
+def classification(form_data1, min_cadrs_value=95):
     # получаем путь к директории с видео
-    dir_vid = filedialog.askdirectory()
+    dir_vid = filedialog.askdirectory(title = 'Выберите директорию с видео')
     dir_vid = f'{dir_vid}/'
 
     # на основе него задаем путь для сохранения картинок
-    dir_img = 'dir_img/'                                 # не забывать про /
-#    dir_img = f'{dir_vid[:-8]}{dir_img}/'
+    dir_img = 'dir_img/'  # не забывать про /
+    #    dir_img = f'{dir_vid[:-8]}{dir_img}/'
 
     print(dir_img)
 
@@ -324,13 +431,13 @@ def classification(form_data1, min_cadrs_value = 95):
         os.mkdir(dir_img)
 
     # нарезка видео и сохранение кадров
-    list_video_names = save_frames(dir_vid, dir_img, min_cadrs_value)
+    list_video_names, number_of_cadrs = save_frames(dir_vid, dir_img, min_cadrs_value)
 
     # Получение из кадров видео nampy массива
-    data_all, list_len = show_pred(dir_img, list_video_names, form_data1)
+    data_all, data_NoR, list_len = show_pred(dir_img, list_video_names, number_of_cadrs, need_count = True, function = form_data1)
 
     # получение предсказания
-    control_predict(data_all, list_len)
+    control_predict(data_all, data_NoR, list_len)
 
     # в конце удаляем папку с нарезанными кадрами (vid_img)
     shutil.rmtree(dir_img)
