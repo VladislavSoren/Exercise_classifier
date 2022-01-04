@@ -4,7 +4,7 @@
 
 from matplotlib import pyplot as plt
 from matplotlib import image
-from gluoncv    import model_zoo, data, utils
+from gluoncv import model_zoo, data, utils
 from gluoncv.data.transforms.pose import detector_to_simple_pose, heatmap_to_coord
 from PIL import Image
 
@@ -460,7 +460,7 @@ def control_predict(data_all, data_NoR, list_len):
             {'type of exercise': pred, 'number of repetitions' : data_NoR[i]})
             
     window = tk.Tk()
-    window.geometry('500x500')
+    window.geometry('900x500')
     window.title("Таблица", )
 
     lbl = tk.Label(window, text=df, font=("Arial Bold", 25))
@@ -503,12 +503,19 @@ def classification(form_data1, min_cadrs_value=95):
     list_video_names, number_of_cadrs = save_frames(dir_vid, 
                                                 dir_img, 
                                                 min_cadrs_value)
+    # Выбор режима
+    need_count = str(input('Введите 1, чтобы активировать режим "Классификация + счет"\n'))
+    print(need_count)
+    if need_count == '1':
+        need_count = True
+    else:
+        need_count = False
 
     # Получение из кадров видео nampy массива
     data_all, data_NoR, list_len = show_pred(dir_img, list_video_names, 
                                                 number_of_cadrs, 
-                                                need_count = True, 
-                                                function = form_data1)
+                                                need_count,
+                                                form_data1)
 
     # получение предсказания
     control_predict(data_all, data_NoR, list_len)
