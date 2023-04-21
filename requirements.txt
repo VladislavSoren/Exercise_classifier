@@ -1,0 +1,4 @@
+mxnet==1.8.0
+gluoncv==0.11.0b20221003
+tensorflow==2.12.0
+scikit-learn==1.2.2

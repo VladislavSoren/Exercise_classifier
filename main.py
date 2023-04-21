@@ -2,17 +2,18 @@
 # Подгружаем необходимые библиотеки и модули.
 #############################################
 
-from matplotlib import pyplot as plt
-from matplotlib import image
 from gluoncv import model_zoo, data, utils
 from gluoncv.data.transforms.pose import detector_to_simple_pose, heatmap_to_coord
+import keras as K
+from sklearn import preprocessing
+import cv2
+
+from matplotlib import pyplot as plt
 from PIL import Image
 
-import cv2
+
 import numpy as np
-import os
-import keras as K
-import subprocess
+
 import time
 import os
 import shutil
@@ -21,7 +22,7 @@ import pandas as pd
 import tkinter as tk
 from tkinter import filedialog
 
-from sklearn import preprocessing
+
 
 
 #############################
@@ -52,8 +53,7 @@ exercise_recognizer = K.models.load_model(path_classificator)
 ######################################
 # функция предикта одного изображения.
 ######################################
-
-def predict(path):
+def predict(path, pause_on_marked_up_photo=None):
 
     '''
     Значение функции:
@@ -83,19 +83,21 @@ def predict(path):
     print('Суставные координаты: ', pred_coords)
     print('Размер координат: ', pred_coords.shape)
 
-    ax = utils.viz.plot_keypoints(img, pred_coords, confidence,
-                                  class_IDs, bounding_boxs, scores,
-                                  box_thresh=0.5, keypoint_thresh=0.2)
+    # Если не была введена пауза для отображения размеченных кадров,
+    if pause_on_marked_up_photo != None:
+        ax = utils.viz.plot_keypoints(img, pred_coords, confidence,
+                                      class_IDs, bounding_boxs, scores,
+                                      box_thresh=0.5, keypoint_thresh=0.2)
 
-    ax  
-    plt.draw()
-    plt.gcf().canvas.flush_events()
+        ax
+        plt.draw()
+        plt.gcf().canvas.flush_events()
 
-    # Задержка перед следующим обновлением
-    time.sleep(0.01)
+        # Задержка перед следующим обновлением
+        time.sleep(1)
 
-    # закрываем картинку
-    plt.close()
+        # закрываем картинку
+        plt.close()
 
     # возвращаем координаты бокса и узлов
     return upscale_bbox, pred_coords
@@ -169,7 +171,12 @@ def save_frames(dir_video, dir_img, min_value):
 # Функция получения DataFrames для классификатора и счетчика.
 #############################################################
 
-def show_pred(dir_source, list_video_names,number_of_cadrs, need_count, function):
+def show_pred(dir_source,
+              list_video_names,
+              number_of_cadrs,
+              need_count,
+              function,
+              pause_on_marked_up_photo):
 
     '''
     Значение функции:
@@ -220,7 +227,8 @@ def show_pred(dir_source, list_video_names,number_of_cadrs, need_count, function
                 count = 0
                 for try_step in range(10):
                     try:
-                        upscale_bbox, pred_coords = predict(f'{dir_source}{video_name}_cadr_{str(counter + count)}.jpg')
+                        upscale_bbox, pred_coords = predict(f'{dir_source}{video_name}_cadr_{str(counter + count)}.jpg',
+                                                            pause_on_marked_up_photo=pause_on_marked_up_photo)
                     except:
                         count += 1
                         continue
@@ -250,7 +258,8 @@ def show_pred(dir_source, list_video_names,number_of_cadrs, need_count, function
                 count = 0
                 for try_step in range(10):
                     try:
-                        upscale_bbox, pred_coords = predict(f'{dir_source}{video_name}_cadr_{str(counter + count)}.jpg')
+                        upscale_bbox, pred_coords = predict(f'{dir_source}{video_name}_cadr_{str(counter + count)}.jpg',
+                                                            pause_on_marked_up_photo=pause_on_marked_up_photo)
                         # размерность pred_coords - (1, 17, 2)
                     except:
                         count += 1
@@ -466,14 +475,12 @@ def control_predict(data_all, data_NoR, list_len):
     lbl = tk.Label(window, text=df, font=("Arial Bold", 25))
     lbl.grid(column=0, row=20)
 
-    window.mainloop()
-
 
 ####################################
 # Слияние всех глобальных функций.
 ####################################
 
-def classification(form_data1, min_cadrs_value=95):
+def classification(form_data1, min_cadrs_value=95, pause_on_marked_up_photo=None):
 
     '''
     Значение функции:
@@ -515,10 +522,14 @@ def classification(form_data1, min_cadrs_value=95):
     data_all, data_NoR, list_len = show_pred(dir_img, list_video_names, 
                                                 number_of_cadrs, 
                                                 need_count,
-                                                form_data1)
+                                                form_data1,
+                                                pause_on_marked_up_photo)
 
     # получение предсказания
     control_predict(data_all, data_NoR, list_len)
 
     # в конце удаляем папку с нарезанными кадрами (vid_img)
-    shutil.rmtree(dir_img)
+    try:
+        shutil.rmtree(dir_img)
+    except:
+        pass

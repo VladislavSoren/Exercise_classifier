@@ -1,7 +1,8 @@
 # импорт модуля распознования
-import  main
+import main
 
-form_function  = main.form_data1   # функция формирования numpy маасивов
+form_function = main.form_data1   # функция формирования numpy маасивов
 
 # Распознавание
-main.classification(form_data1 = form_function)
+main.classification(form_data1=form_function,
+                    pause_on_marked_up_photo=None)
