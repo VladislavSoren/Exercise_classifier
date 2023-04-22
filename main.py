@@ -19,9 +19,6 @@ import os
 import shutil
 import pandas as pd
 
-import tkinter as tk
-from tkinter import filedialog
-
 
 
 
@@ -43,8 +40,7 @@ detector.reset_class(["person"], reuse_weights=['person'])
 ########################################
 # Загружаем предобученный классификатор.
 ########################################
-
-path_classificator = filedialog.askopenfilename(title='Выберите классификатор') # Получаем путь к директории с классификатором.
+path_classificator = 'exercise_recognizer_best.h5'
 exercise_recognizer = K.models.load_model(path_classificator)
 
 
@@ -77,11 +73,11 @@ def predict(path, pause_on_marked_up_photo=None):
     predicted_heatmap = pose_net(pose_input)
     pred_coords, confidence = heatmap_to_coord(predicted_heatmap, upscale_bbox)
 
-    print('Координаты бокса: ', upscale_bbox)
-    print('Размер бокса: ', len(upscale_bbox))
-
-    print('Суставные координаты: ', pred_coords)
-    print('Размер координат: ', pred_coords.shape)
+    # Данные по кадру
+    # print('Координаты бокса: ', upscale_bbox)
+    # print('Размер бокса: ', len(upscale_bbox))
+    # print('Суставные координаты: ', pred_coords)
+    # print('Размер координат: ', pred_coords.shape)
 
     # Если не была введена пауза для отображения размеченных кадров,
     if pause_on_marked_up_photo != None:
@@ -142,10 +138,10 @@ def save_frames(dir_video, dir_img, min_value):
             frame_is_read, frame = video_capture.read()
             cur_video = cur_video.replace(".", "")  
             if frame_is_read:
-                print(type(frame))
                 cv2.imwrite(f'{dir_img}{cur_video}_cadr_{str(counter)}.jpg', frame)
-                print(cv2.imwrite(f'{dir_img}{cur_video}_cadr_{str(counter)}.jpg', frame))
                 counter += 1
+                if counter % 20 == 0:
+                    print(counter)
             else:
                 print("Could not read the frame.")
                 break
@@ -244,10 +240,10 @@ def show_pred(dir_source,
             list_bbox =  list_bbox_count[0:10]
             list_coords =  list_coords_count[0:10]
 
-            print('list_bbox_count:', list_bbox_count)
-            print('list_coords_count', list_coords_count)
-            print('list_bbox', list_bbox)
-            print('list_coords', list_coords)
+            # print('list_bbox_count:', list_bbox_count)
+            # print('list_coords_count', list_coords_count)
+            # print('list_bbox', list_bbox)
+            # print('list_coords', list_coords)
 
         else: # Если НЕ выбран режим подсчтета количества упражнений
         
@@ -446,7 +442,8 @@ def control_predict(data_all, data_NoR, list_len):
 
     df = pd.DataFrame(columns=['type of exercise', 'number of repetitions'])
 
-    Class_img_path = filedialog.askdirectory(title='Укажите путь к картинкам классов')
+    # Class_img_path = filedialog.askdirectory(title='Укажите путь к картинкам классов')
+    Class_img_path = 'Class_img'
 
     for i in range(list_len):
     
@@ -467,13 +464,8 @@ def control_predict(data_all, data_NoR, list_len):
 
         df.loc[f'Video_{i+1}'] = pd.Series(
             {'type of exercise': pred, 'number of repetitions' : data_NoR[i]})
-            
-    window = tk.Tk()
-    window.geometry('900x500')
-    window.title("Таблица", )
 
-    lbl = tk.Label(window, text=df, font=("Arial Bold", 25))
-    lbl.grid(column=0, row=20)
+    print(df)
 
 
 ####################################
@@ -493,7 +485,7 @@ def classification(form_data1, min_cadrs_value=95, pause_on_marked_up_photo=None
     '''
 
     # получаем путь к директории с видео
-    dir_vid = filedialog.askdirectory(title = 'Выберите директорию с видео')
+    dir_vid = 'videos'
     dir_vid = f'{dir_vid}/'
 
     # на основе него задаем путь для сохранения картинок
