@@ -90,7 +90,7 @@ def predict(path, pause_on_marked_up_photo=None):
         plt.gcf().canvas.flush_events()
 
         # Задержка перед следующим обновлением
-        time.sleep(1)
+        time.sleep(pause_on_marked_up_photo)
 
         # закрываем картинку
         plt.close()
@@ -460,7 +460,7 @@ def control_predict(data_all, data_NoR, list_len):
         ax.set(title=f'Видео № {i+1}')
         plt.axis('off')
 
-        plt.show()
+        # plt.show()
 
         df.loc[f'Video_{i+1}'] = pd.Series(
             {'type of exercise': pred, 'number of repetitions' : data_NoR[i]})
