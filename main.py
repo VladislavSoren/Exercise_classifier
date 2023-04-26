@@ -49,7 +49,10 @@ exercise_recognizer = K.models.load_model(path_classificator)
 ######################################
 # функция предикта одного изображения.
 ######################################
-def predict(path, pause_on_marked_up_photo=None):
+def predict(path,
+            dir_img_with_points,
+            counter,
+            pause_on_marked_up_photo=None):
 
     '''
     Значение функции:
@@ -85,9 +88,17 @@ def predict(path, pause_on_marked_up_photo=None):
                                       class_IDs, bounding_boxs, scores,
                                       box_thresh=0.5, keypoint_thresh=0.2)
 
-        ax
-        plt.draw()
-        plt.gcf().canvas.flush_events()
+    # if (counter > 0) and ((counter < 40)):
+    if (counter > 0) and (counter < 1000):
+        img = utils.viz.cv_plot_keypoints(img, pred_coords, confidence,
+                                      class_IDs, bounding_boxs, scores,
+                                      box_thresh=0.5, keypoint_thresh=0.2)
+
+        cv2.imwrite(f'{dir_img_with_points}img_{counter}.jpg', img)
+
+        # ax
+        # plt.draw()
+        # plt.gcf().canvas.flush_events()
 
         # Задержка перед следующим обновлением
         time.sleep(pause_on_marked_up_photo)
@@ -168,6 +179,7 @@ def save_frames(dir_video, dir_img, min_value):
 #############################################################
 
 def show_pred(dir_source,
+              dir_img_with_points,
               list_video_names,
               number_of_cadrs,
               need_count,
@@ -224,6 +236,8 @@ def show_pred(dir_source,
                 for try_step in range(10):
                     try:
                         upscale_bbox, pred_coords = predict(f'{dir_source}{video_name}_cadr_{str(counter + count)}.jpg',
+                                                            dir_img_with_points,
+                                                            counter,
                                                             pause_on_marked_up_photo=pause_on_marked_up_photo)
                     except:
                         count += 1
@@ -255,6 +269,8 @@ def show_pred(dir_source,
                 for try_step in range(10):
                     try:
                         upscale_bbox, pred_coords = predict(f'{dir_source}{video_name}_cadr_{str(counter + count)}.jpg',
+                                                            dir_img_with_points,
+                                                            counter,
                                                             pause_on_marked_up_photo=pause_on_marked_up_photo)
                         # размерность pred_coords - (1, 17, 2)
                     except:
@@ -465,14 +481,17 @@ def control_predict(data_all, data_NoR, list_len):
         df.loc[f'Video_{i+1}'] = pd.Series(
             {'type of exercise': pred, 'number of repetitions' : data_NoR[i]})
 
-    print(df)
+    return df
 
 
 ####################################
 # Слияние всех глобальных функций.
 ####################################
 
-def classification(form_data1, min_cadrs_value=95, pause_on_marked_up_photo=None):
+def classification(form_data1,
+                   dir_vid,
+                   dir_img_with_points,
+                   min_cadrs_value=95, pause_on_marked_up_photo=None):
 
     '''
     Значение функции:
@@ -484,26 +503,26 @@ def classification(form_data1, min_cadrs_value=95, pause_on_marked_up_photo=None
 
     '''
 
-    # получаем путь к директории с видео
-    dir_vid = 'videos'
-    dir_vid = f'{dir_vid}/'
+    # Default
+    need_count = '1'
 
-    # на основе него задаем путь для сохранения картинок
-    dir_img = 'dir_img/'  # не забывать про /
+    # на основе него задаем путь для временного хранения кадров видео
+    dir_img = 'dir_img/'  # не забывать про "/"
+
 
     print(dir_img)
 
-    # повторный запуск mkdir с тем же именем вызывает FileExistsError,
-    # вместо этого запустите:
+    # Если dir_img нет, то создаём её
     if not os.path.isdir(dir_img):
         os.mkdir(dir_img)
+
 
     # нарезка видео и сохранение кадров
     list_video_names, number_of_cadrs = save_frames(dir_vid, 
                                                 dir_img, 
                                                 min_cadrs_value)
     # Выбор режима
-    need_count = str(input('Введите 1, чтобы активировать режим "Классификация + счет"\n'))
+    # need_count = str(input('Введите 1, чтобы активировать режим "Классификация + счет"\n'))
     print(need_count)
     if need_count == '1':
         need_count = True
@@ -511,17 +530,50 @@ def classification(form_data1, min_cadrs_value=95, pause_on_marked_up_photo=None
         need_count = False
 
     # Получение из кадров видео nampy массива
-    data_all, data_NoR, list_len = show_pred(dir_img, list_video_names, 
+    data_all, data_NoR, list_len = show_pred(dir_img,
+                                             dir_img_with_points,
+                                             list_video_names,
                                                 number_of_cadrs, 
                                                 need_count,
                                                 form_data1,
                                                 pause_on_marked_up_photo)
 
     # получение предсказания
-    control_predict(data_all, data_NoR, list_len)
+    res_table = control_predict(data_all, data_NoR, list_len)
 
     # в конце удаляем папку с нарезанными кадрами (vid_img)
     try:
         shutil.rmtree(dir_img)
     except:
         pass
+
+    return res_table
+
+
+if __name__ == "__main__":
+
+    dir_vid = 'folders_for_test/videos/'
+    dir_img_with_points = 'folders_for_test/imgs/'
+
+    # try:
+    #     shutil.rmtree(dir_vid)
+    # except:
+    #     pass
+
+    try:
+        shutil.rmtree(dir_img_with_points)
+    except:
+        pass
+
+    if not os.path.isdir(dir_vid):
+        os.mkdir(dir_vid)
+    if not os.path.isdir(dir_img_with_points):
+        os.mkdir(dir_img_with_points)
+
+    form_function = form_data1
+
+    res_table = classification(form_function,
+                                    dir_vid,
+                                    dir_img_with_points,
+                                    pause_on_marked_up_photo=None)
+
