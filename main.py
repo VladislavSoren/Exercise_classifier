@@ -101,7 +101,8 @@ def predict(path,
         # plt.gcf().canvas.flush_events()
 
         # Задержка перед следующим обновлением
-        time.sleep(pause_on_marked_up_photo)
+        if pause_on_marked_up_photo != None:
+            time.sleep(pause_on_marked_up_photo)
 
         # закрываем картинку
         plt.close()
@@ -296,14 +297,14 @@ def show_pred(dir_source,
         print(data_class)
         
 #..................................Данные для счетчика......................... 
-        # Получаем сформированные данны текущего видео по данным для классификации
-        number_of_repet = function_count(list_coords_count)
-        
-        # Конкатинируем все видео и получаем общий массив с данными
-        data_NoR.append(number_of_repet)       
-        print('data_NoR:', data_NoR)
+        # # Получаем сформированные данны текущего видео по данным для классификации
+        # number_of_repet = function_count(list_coords_count)
+        #
+        # # Конкатинируем все видео и получаем общий массив с данными
+        # data_NoR.append(number_of_repet)
+        # print('data_NoR:', data_NoR)
 
-    return data_class, data_NoR, len(list_video_names)
+    return data_class, list_coords_count, len(list_video_names)
 
 
 ###################################################################
@@ -321,24 +322,40 @@ def show_pred(dir_source,
         count - количество повторений упражнения на текущем видео
     '''
 
-def function_count (list_coords_count):
+def function_count(list_coords_count, pred):
     list_y = []
     for cadr in list_coords_count:      # cadr.shape = (1, 17, 2)
         list_y.append(cadr[0][11][1])   # берём координаты узла таза на наиболее вероятном человеке в кадре
 
     # считаем кол-во повторений
-    check = True
-    count = 0
-    
-    for i in range(1, len(list_y)):
-    
-        if list_y[i] - list_y[i - 1] < 0:
-            check = True
+    if pred == 'подтягивания':
+        check = True
+        count = 0
 
-        if check:
-            if list_y[i] - list_y[i - 1] >= 0:
-                check = False
-                count += 1
+        for i in range(1, len(list_y)):
+            filtr = (abs(list_y[i] - list_y[i - 1]) > 15)
+
+            if (list_y[i] - list_y[i - 1] < 0) and filtr:
+                check = True
+
+            if check:
+                if (list_y[i] - list_y[i - 1] >= 0) and filtr:
+                    check = False
+                    count += 1
+    else:
+        check = True
+        count = 0
+
+        for i in range(1, len(list_y)):
+            filtr = (abs(list_y[i] - list_y[i - 1]) > 15)
+
+            if (list_y[i] - list_y[i - 1] > 0) and filtr:
+                check = True
+
+            if check:
+                if list_y[i] - list_y[i - 1] <= 0 and filtr:
+                    check = False
+                    count += 1
                 
     print(count)
     return count 
@@ -425,7 +442,7 @@ def form_data2(list_bbox, list_coords):
 # Получения предикта классификатора из Data (numpy массивов).
 #############################################################
 
-def control_predict(data_all, data_NoR, list_len):
+def control_predict(data_all, list_coords_count, list_len):
 
     '''
     Значение функции:
@@ -456,6 +473,7 @@ def control_predict(data_all, data_NoR, list_len):
 
     prediction = exercise_recognizer.predict(x_test)  # получаем весь предикт
 
+
     df = pd.DataFrame(columns=['type of exercise', 'number of repetitions'])
 
     # Class_img_path = filedialog.askdirectory(title='Укажите путь к картинкам классов')
@@ -470,16 +488,25 @@ def control_predict(data_all, data_NoR, list_len):
 
         img = Image.open(f'{Class_img_path}/{cluss_number}.jpg')
 
-        fig = plt.figure(figsize=(6, 4))
-        ax = fig.add_subplot()
-        ax.imshow(img)
-        ax.set(title=f'Видео № {i+1}')
-        plt.axis('off')
+        # fig = plt.figure(figsize=(6, 4))
+        # ax = fig.add_subplot()
+        # ax.imshow(img)
+        # ax.set(title=f'Видео № {i+1}')
+        # plt.axis('off')
 
         # plt.show()
 
+        # Подсчёт кол-во выполненного упражнения
+        # Получаем сформированные данны текущего видео по данным для классификации
+        number_of_repet = function_count(list_coords_count, pred)
+
         df.loc[f'Video_{i+1}'] = pd.Series(
-            {'type of exercise': pred, 'number of repetitions' : data_NoR[i]})
+            {'type of exercise': pred, 'number of repetitions' : number_of_repet})
+
+
+    # # Конкатинируем все видео и получаем общий массив с данными
+    # data_NoR.append(number_of_repet)
+    # print('data_NoR:', data_NoR)
 
     return df
 
@@ -530,7 +557,7 @@ def classification(form_data1,
         need_count = False
 
     # Получение из кадров видео nampy массива
-    data_all, data_NoR, list_len = show_pred(dir_img,
+    data_all, list_coords_count, list_len = show_pred(dir_img,
                                              dir_img_with_points,
                                              list_video_names,
                                                 number_of_cadrs, 
@@ -539,7 +566,7 @@ def classification(form_data1,
                                                 pause_on_marked_up_photo)
 
     # получение предсказания
-    res_table = control_predict(data_all, data_NoR, list_len)
+    res_table = control_predict(data_all, list_coords_count, list_len)
 
     # в конце удаляем папку с нарезанными кадрами (vid_img)
     try:
